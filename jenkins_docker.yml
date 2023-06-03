@@ -1,0 +1,96 @@
+- name: Install Ansible, Jenkins, and Docker
+  hosts: node2
+  become: true
+  gather_facts: no
+
+  tasks:
+    - name: update all pkgs
+      yum:
+        name: "*"
+        state: latest
+
+    - name: Remove docker if installed from CentOS repo
+      yum:
+        name: "{{ item }}"
+        state: removed
+      loop:
+        - docker
+        - docker-client
+        - docker-client-latest
+        - docker-common
+        - docker-latest
+        - docker-latest-logrotate
+        - docker-logrotate
+        - docker-engine
+
+    - name: Install yum utils
+      yum: 
+        name: yum-utils
+        state: latest 
+
+    - name: Install pip
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install ansible
+      pip:
+        name: ansible
+        state: present
+
+    - name: Install required packages
+      yum:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - java-11-amazon-corretto
+        - docker
+
+    - name: Add user ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Start and enable Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add Jenkins repository key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+        state: present
+
+    - name: Add Jenkins repository
+      yum_repository:
+        name: jenkins
+        description: Jenkins Repository
+        baseurl: http://pkg.jenkins.io/redhat-stable
+        gpgcheck: yes
+        gpgkey: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+        enabled: yes
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Add user ec2-user to jenkins group
+      user:
+        name: ec2-user
+        groups: jenkins
+        append: yes
+
+    - name: Start and enable jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+    
+    # - name: inital admin password for jenkins
+    #   command: "ssh -i /home/ec2-user/seryum.pem -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ec2-user@18.207.105.5 'sudo cat /var/lib/jenkins/secrets/initialAdminPassword' > initialpasswd.txt"
+
+
+    

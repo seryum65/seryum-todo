@@ -1,0 +1,112 @@
+- name: bridge networks config
+  hosts: web_server
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Create docker networks bridge
+      docker_network:
+        name: all2
+        driver: bridge
+
+- name: postgre database config
+  hosts: web_server
+  become: true
+  gather_facts: no
+  vars: 
+    container_path: /home/ec2-user/todo/todoserver/postgresql
+    container_name: todo_postgres
+    image_name: postgres:latest
+  tasks:
+    - name: create build directory
+      file:
+        path: "{{ container_path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: copy the sql script
+      copy:
+        src: "/home/ec2-user/todo/todoserver/src/main/resources/init.sql"
+        dest: "{{ container_path }}"
+
+    - name: copy the Dockerfile
+      copy:
+        src: "/home/ec2-user/todo/todoserver/postgres/Dockerfile"
+        dest: "{{ container_path }}"
+
+    - name: remove {{ container_name }} container and {{ image_name }} if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: build postgresql container image
+      docker_image:
+        name: "{{ image_name }}"
+        build:
+          path: "{{ container_path }}"
+        source: build
+        state: present
+
+    - name: launch postgresql docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports: 
+          - "5432:5432"
+        env:
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "admin"
+        volumes:
+          - /db-data:/var/lib/postgresql/data
+        networks:
+          - name: all2
+      register: container_info
+
+    - name: print the container info
+      debug:
+        var: container_info
+
+    - name: Wait for TCP port to be available
+      wait_for:
+        host: "172.31.4.30"
+        port: "5432"
+        delay: 10
+        timeout: 300
+
+    - name: Execute init.sql
+      command: docker exec "{{ container_name }}" psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
+    
+- name: todo Server configuration
+  hosts: web_server
+  become: true
+  gather_facts: no
+  vars: 
+    container_path: /home/ec2-user/todo/todoserver
+    container_name: todo_server
+    image_name: todo_server:latest
+  tasks:
+
+    - name: remove {{ container_name }} container and {{ image_name }} if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: build todoserver container image
+      docker_image:
+        name: "{{ image_name }}"
+        build:
+          path: "{{ container_path }}"
+        source: build
+        state: present
+
+    - name: Launch todoserver docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports:
+          - "8000:8000"
+        env: 
+          SPRING_DATASOURCE_URL: "jdbc:postgresql://172.31.4.30:5432/todo_db"
+
+        networks:
+          - name: all2
+      when: container_info is succeeded
