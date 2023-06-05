@@ -32,6 +32,7 @@
         - device-mapper-persistent-data # ecr ile etkileşim için redhat makinelerinde   
         - lvm2     # device-mapper-persistent-data ve lvm2 kurulması gerekiyor
         - unzip    # redhat makinelerinde unzip kurulu olmadığı için unzip kurmamız gerekiyor
+        - git
 
     - name: Install Docker
       yum:
@@ -62,6 +63,22 @@
         name: docker
         state: started
         enabled: yes
+
+- name: Clone or update GitHub repository
+  hosts: node2
+  gather_facts: false
+
+  vars:
+    repo_url: "https://github.com/seryum65/seryum-todo.git"
+    target_directory: "/home/ec2-user/seryum-todo"
+
+  tasks:
+    - name: Clone or update repository
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ target_directory }}"
+        version: dev
+        update: yes
 
 - name: bridge networks config
   hosts: node2
@@ -104,6 +121,9 @@
         port: "5432"
         delay: 10
         timeout: 100
+
+    - name: Execute init.sql
+      command: docker exec postgres_container psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
 
 - name: Launch pgadmin_container
   hosts: node2
