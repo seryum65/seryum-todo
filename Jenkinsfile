@@ -51,10 +51,5 @@ pipeline {
             echo 'Deleting all local images'
             sh 'docker image prune -af'
         }
-        failure {
-
-            echo 'Deleting Terraform Stack due to the Failure'
-                sh 'terraform destroy --auto-approve'
-        }
     }
 }
