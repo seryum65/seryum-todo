@@ -1,8 +1,6 @@
 pipeline {
     agent any
-    tools {
-        terraform 'terraform'
-    }
+
     environment {
         PATH=sh(script:"echo $PATH:/usr/local/bin", returnStdout:true).trim()
         AWS_REGION = "us-east-1"
