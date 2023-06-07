@@ -39,13 +39,13 @@
         name: docker
         state: latest
 
-    - name: Install pip
+    - name: Install pip # docker sdk kurulması için pip
       package:
         name: python3-pip
         state: present
         update_cache: true
 
-    - name: Install docker sdk
+    - name: Install docker sdk # docker_image ve docker_container modullerini kullanbilmek için docker sdk kurulması gerekiyor.
       pip:
         name: docker
         state: present

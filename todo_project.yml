@@ -1,0 +1,211 @@
+- name: install docker and config
+  hosts: _development
+  become: true
+  gather_facts: no
+  tasks:
+    - name: update all packages
+      yum:
+        name: '*'
+        state: latest
+
+    # we may need to uninstall any existing docker files from the centos repo first.
+    - name: Remove docker if installed from CentOS repo
+      yum:
+        name: "{{ item }}"
+        state: removed
+      with_items:
+        - docker
+        - docker-client
+        - docker-client-latest
+        - docker-common
+        - docker-latest
+        - docker-latest-logrotate
+        - docker-logrotate
+        - docker-engine
+
+    - name: Install yum utils
+      yum:
+        name: "{{ item }}"
+        state: latest
+      with_items:
+        - yum-utils
+        - device-mapper-persistent-data # ecr ile etkileşim için redhat makinelerinde   
+        - lvm2     # device-mapper-persistent-data ve lvm2 kurulması gerekiyor
+        - unzip    # redhat makinelerinde unzip kurulu olmadığı için unzip kurmamız gerekiyor
+        - git
+
+    - name: Install Docker
+      yum:
+        name: docker
+        state: latest
+
+    - name: Install pip # docker sdk kurulması için pip
+      package:
+        name: python3-pip
+        state: present
+        update_cache: true
+
+    - name: Install docker sdk # docker_image ve docker_container modullerini kullanbilmek için docker sdk kurulması gerekiyor.
+      pip:
+        name: docker
+        state: present
+        executable: pip3
+        extra_args: "--ignore-installed"
+
+    - name: Add user ec2-user to docker group
+      user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add Jenkins repository key
+      rpm_key:
+        key: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+        state: present
+
+    - name: Add Jenkins repository
+      yum_repository:
+        name: jenkins
+        description: Jenkins Repository
+        baseurl: http://pkg.jenkins.io/redhat-stable
+        gpgcheck: yes
+        gpgkey: https://pkg.jenkins.io/redhat/jenkins.io-2023.key
+        enabled: yes
+
+    - name: Install Jenkins
+      yum:
+        name: jenkins
+        state: present
+
+    - name: Add user ec2-user to jenkins group
+      user:
+        name: ec2-user
+        groups: jenkins
+        append: yes
+
+    - name: Start and enable jenkins service
+      service:
+        name: jenkins
+        state: started
+        enabled: yes
+
+- name: bridge networks config
+  hosts: _development
+  become: true
+  gather_facts: no
+  tasks:
+    - name: Create docker networks bridge
+      docker_network:
+        name: all
+        driver: bridge
+        
+- name: postgre database config
+  hosts: _development
+  become: true
+  vars:
+    container_name: postgres_container
+    image_name: postgres:latest
+  tasks:
+    - name: remove {{ container_name }} container and {{ image_name }} if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: Launch postgresql docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports:
+          - "5432:5432"
+        env:
+          POSTGRES_USER: "postgres"
+          POSTGRES_PASSWORD: "admin"
+        volumes:
+          - '/db-data:/var/lib/postgresql/data'
+          - './todoserver/src/main/resources/init.sql:/docker-entrypoint-initdb.d/init.sql'
+        networks:
+          - name: all
+    - name: Wait for TCP port to be available
+      wait_for:
+        host: "172.31.15.166"
+        port: "5432"
+        delay: 10
+        timeout: 100
+
+    - name: Execute init.sql
+      command: docker exec postgres_container psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
+
+- name: Launch pgadmin_container
+  hosts: _development
+  become: true
+  vars:
+    container_name: pgadmin_container
+    image_name: dpage/pgadmin4
+  tasks:
+    - name: remove {{ container_name }} container and {{ image_name }} if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: Launch pgadmin docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports:
+          - "5050:80"
+        env:
+          PGADMIN_DEFAULT_EMAIL: 'pgadmin4@pgadmin.org'
+          PGADMIN_DEFAULT_PASSWORD: 'admin'
+          PGADMIN_CONFIG_SERVER_MODE: 'False'
+          PGADMIN_LISTEN_ADDRESS: '0.0.0.0'
+          PGADMIN_LISTEN_PORT: '80'
+        volumes: 
+          - pgadmin:/root/.pgadmin
+        networks:
+          - name: all
+
+- name: todo Server configuration
+  hosts: _development
+  become: true
+  vars:
+    container_name: todo_server
+    image_name: seryum65/todo_server:latest
+  tasks:
+    - name: remove {{ container_name }} container and {{ image_name }} image if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: Launch todoserver docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports:
+          - "8000:8000"
+        env: 
+          SPRING_DATASOURCE_URL: jdbc:postgresql://172.31.15.166:5432/todo_db
+        networks:
+          - name: all
+
+- name: todo App configuration
+  hosts: _development
+  become: true
+  vars:
+    container_name: todo_app
+    image_name: seryum65/todo_app:latest
+  tasks:
+    - name: remove {{ container_name }} container and {{ image_name }} image if exists
+      shell: "docker ps -q --filter 'name={{ container_name }}' && docker stop {{ container_name }} && docker rm -fv {{ container_name }} && docker image rm -f {{ image_name }} || echo 'Not Found'"
+
+    - name: Launch todoapp docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        ports:
+          - "8081:8080"
+        networks:
+          - name: all
