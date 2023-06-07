@@ -26,7 +26,7 @@ pipeline {
 
                 script {
                     // Log in to Docker Hub
-                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                withDockerRegistry(credentialsId: 'dockerhub') {// some block 
                     }
                 sh 'docker push "seryum65/todo_app:latest"'
                 sh 'docker push "seryum65/todo_server:latest"'
