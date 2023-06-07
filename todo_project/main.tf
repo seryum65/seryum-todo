@@ -5,6 +5,12 @@ terraform {
       version = "~> 4.0"
     }
   }
+  backend "s3" {
+    bucket = "jenkins-project-backend-seryum"
+    key = "backend/tf-backend-jenkins.tfstate"
+    region = "us-east-1"
+    
+  }
 }
 
 provider "aws" {
@@ -25,6 +31,7 @@ resource "aws_instance" "managed_nodes" {
   instance_type = "t3a.medium"
   key_name = "seryum"
   vpc_security_group_ids = [aws_security_group.tf-sec-gr.id]
+  iam_instance_profile = "jenkins-project-profile-${var.user}"
   tags = {
     Name = "todo_${element(var.tags, count.index )}"
     stack = "todo_project"
