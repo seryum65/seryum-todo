@@ -25,6 +25,7 @@ pipeline {
         stage('Build App Docker Image') {
             steps {
                 echo 'Building App Image'
+                sh 'pwd'
                 script {
                     env.DB_HOST = sh(script: 'terraform output -raw node_private_ip', returnStdout:true).trim()
                 }
