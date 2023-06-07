@@ -16,6 +16,7 @@ pipeline {
                 sh 'cat ./todoserver/src/main/resources/application.properties'
                 sh 'docker-compose up -d '
                 sh 'docker image ls'
+                sh 'docker ps'
             }
         }
 
