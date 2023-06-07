@@ -37,7 +37,7 @@ resource "aws_iam_role" "aws_access" {
 }
 
 resource "aws_iam_instance_profile" "ec2-profile" {
-  name = "jenkins-project-profile-${var.user}"
+  name = "todo-project-profile-${var.user}"
   role = aws_iam_role.aws_access.name
 }
 
