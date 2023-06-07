@@ -60,7 +60,7 @@ pipeline {
                 sh 'ls -l'
                 sh 'ansible --version'
                 sh 'ansible-inventory --graph'
-                ansiblePlaybook become: true, colorized: true, credentialsId: 'seryum', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory_aws_ec2.yml', playbook: 'docker_project.yml'
+                ansiblePlaybook become: true, colorized: true, credentialsId: 'seryum', disableHostKeyChecking: true, installation: 'ansible', inventory: 'inventory_aws_ec2.yml', playbook: 'todo_project.yml'
              }
         }
 
