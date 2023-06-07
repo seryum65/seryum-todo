@@ -14,6 +14,7 @@ pipeline {
             steps {
                 echo 'Creating Infrastructure for the App on AWS Cloud'
                 sh 'cd todo_project'
+                sh 'ls -l'               
                 sh 'terraform init'
                 sh 'terraform apply --auto-approve'
                 sh 'cd ..'
@@ -37,6 +38,11 @@ pipeline {
         stage('Push Image to Dockerhub') {
             steps {
                 echo 'Pushing App Image to Dockerhub'
+
+                script {
+                    // Log in to Docker Hub
+                    withDockerRegistry([credentialsId: 'dockerhub', url: '']) {
+                    }
                 sh 'docker push "seryum65/todo_app:latest"'
                 sh 'docker push "seryum65/todo_server:latest"'
 
