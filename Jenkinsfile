@@ -27,9 +27,10 @@ pipeline {
                 script {
                     // Log in to Docker Hub
                 withDockerRegistry(credentialsId: 'dockerhub') {// some block 
-                    }
                 sh 'docker push "seryum65/todo_app:latest"'
-                sh 'docker push "seryum65/todo_server:latest"'
+                sh 'docker push "seryum65/todo_server:latest"'                
+                    }
+
                 sh 'docker stop $(docker ps -a -q)'                
                 sh 'docker rm $(docker ps -a -q)'
                 sh 'docker image prune -af'
