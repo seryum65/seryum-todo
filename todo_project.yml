@@ -1,5 +1,5 @@
 - name: install docker and config
-  hosts: node2
+  hosts: node1
   become: true
   gather_facts: no
   tasks:
@@ -96,7 +96,7 @@
         enabled: yes
 
 - name: bridge networks config
-  hosts: node2
+  hosts: node1
   become: true
   gather_facts: no
   tasks:
@@ -106,7 +106,7 @@
         driver: bridge
         
 - name: postgre database config
-  hosts: node2
+  hosts: node1
   become: true
   vars:
     container_name: postgres_container
@@ -141,7 +141,7 @@
       command: docker exec postgres_container psql -U postgres -f /docker-entrypoint-initdb.d/init.sql
 
 - name: Launch pgadmin_container
-  hosts: node2
+  hosts: node1
   become: true
   vars:
     container_name: pgadmin_container
@@ -169,7 +169,7 @@
           - name: all
 
 - name: todo Server configuration
-  hosts: node2
+  hosts: node1
   become: true
   vars:
     container_name: todo_server
@@ -191,7 +191,7 @@
           - name: all
 
 - name: todo App configuration
-  hosts: node2
+  hosts: node1
   become: true
   vars:
     container_name: todo_app
