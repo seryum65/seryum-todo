@@ -29,7 +29,7 @@ pipeline {
                 sh 'echo ${DB_HOST}'
                 sh 'envsubst < applications-properties-template > ./todoserver/src/main/resources/application.properties'
                 sh 'cat ./todoserver/src/main/resources/application.properties'
-                sh 'docker-compose up --build .'
+                sh 'docker-compose up --build '
                 sh 'docker image ls'
             }
         }
