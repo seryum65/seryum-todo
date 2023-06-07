@@ -14,7 +14,7 @@ pipeline {
             steps {
                 echo 'Building App Image'
                 sh 'cat ./todoserver/src/main/resources/application.properties'
-                sh 'docker-compose up --build '
+                sh 'docker-compose up -d '
                 sh 'docker image ls'
             }
         }
