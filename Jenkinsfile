@@ -48,6 +48,7 @@ pipeline {
 
             }
         }
+        }
 
         stage('wait the instance') {
             steps {
@@ -88,7 +89,7 @@ pipeline {
         // }
 
     }
-    }
+    
     post {
         always {
             echo 'Deleting all local images'
