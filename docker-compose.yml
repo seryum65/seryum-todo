@@ -41,7 +41,7 @@ services:
     build:
       context: ./todoserver
       dockerfile: Dockerfile
-    image: todo_server:latest
+    image: seryum65/todo_server:latest
     ports:
       - 8000:8000
     networks:
@@ -49,7 +49,7 @@ services:
 
   todo-app:
     container_name: todo_app
-    image: todo_app:latest
+    image: seryum65/todo_app:latest
     build:
       context: ./todoapp
       dockerfile: Dockerfile
