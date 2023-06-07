@@ -13,11 +13,12 @@ pipeline {
         stage('Create Infrastructure for the App') {
             steps {
                 echo 'Creating Infrastructure for the App on AWS Cloud'
-                sh 'cd todo_project'
+                dir('./todo_project'){
                 sh 'ls -l'
                 sh 'terraform init'
                 sh 'terraform apply --auto-approve'
-                sh 'cd ..'
+                }
+
             }
         }
 
