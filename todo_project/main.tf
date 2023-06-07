@@ -17,6 +17,30 @@ provider "aws" {
   region = "us-east-1"
 }
 
+resource "aws_iam_role" "aws_access" {
+  name = "awsrole-${var.user}"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Sid    = ""
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      },
+    ]
+  })
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess", "arn:aws:iam::aws:policy/AmazonEC2FullAccess", "arn:aws:iam::aws:policy/IAMFullAccess", "arn:aws:iam::aws:policy/AmazonS3FullAccess"]
+
+}
+
+resource "aws_iam_instance_profile" "ec2-profile" {
+  name = "jenkins-project-profile-${var.user}"
+  role = aws_iam_role.aws_access.name
+}
+
 variable "tags" {
   default = ["CI-CD"]
 }
@@ -31,7 +55,7 @@ resource "aws_instance" "managed_nodes" {
   instance_type = "t3a.medium"
   key_name = "seryum"
   vpc_security_group_ids = [aws_security_group.tf-sec-gr.id]
-  iam_instance_profile = "jenkins-project-profile-${var.user}"
+  iam_instance_profile = aws_iam_instance_profile.ec2-profile.name
   tags = {
     Name = "todo_${element(var.tags, count.index )}"
     stack = "todo_project"
