@@ -17,7 +17,6 @@ pipeline {
                 sh 'docker-compose up -d '
                 sh 'docker image ls'
                 sh 'docker ps'
-                sh 'docker rm $(docker ps -a -q)'
             }
         }
 
@@ -31,8 +30,9 @@ pipeline {
                     }
                 sh 'docker push "seryum65/todo_app:latest"'
                 sh 'docker push "seryum65/todo_server:latest"'
+                sh 'docker stop $(docker ps -a -q)'                
                 sh 'docker rm $(docker ps -a -q)'
-                sh 'docker rmi $(docker images -a -q)'
+                sh 'docker image prune -af'
 
             }
         }
